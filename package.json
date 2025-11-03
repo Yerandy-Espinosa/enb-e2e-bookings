@@ -22,6 +22,7 @@
   "type": "commonjs",
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "cypress": "^15.5.0"
+    "cypress": "^15.5.0",
+    "cypress-iframe": "^1.0.1"
   }
 }
