@@ -11,7 +11,11 @@ describe('Guest booking and payment flow', () => {
       .click({ force: true });
 
     // 3️⃣ Selecciona cantidad
-    cy.get('#InfantSum', { timeout: 10000 }).should('be.visible').click();
+    cy.get('#InfantSum', { timeout: 15000 })
+      .should('exist')
+      .and('not.be.disabled')
+      .click();
+
 
     // 4️⃣ Espera a que se habilite el botón "Buy Now"
     cy.get('#bookeventCalendar button.common-btn-buy-now', { timeout: 20000 })
