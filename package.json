@@ -1,0 +1,27 @@
+{
+  "name": "enb-e2e",
+  "version": "1.0.0",
+  "description": "Parallel Cypress tests for ENB booking and payment flow",
+  "main": "cypress.config.js",
+  "scripts": {
+    "test": "npx cypress run",
+    "test:parallel": "npx concurrently \"npx cypress run --browser chrome --headless --spec cypress/e2e/Test_Eonline_one_off.cy.js\" \"npx cypress run --browser chrome --headless --spec cypress/e2e/Test_Eonline_one_off2.cy.js\"",
+    "test:ci": "cypress run --browser chrome --headless",
+    "test:matrix": "echo 'Use GitHub Actions matrix to parallelize'",
+    "postinstall": "cypress install"
+  },
+  "keywords": [
+    "cypress",
+    "parallel",
+    "testing",
+    "booking",
+    "automation"
+  ],
+  "author": "Yerandy Espinosa",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cypress": "^15.5.0"
+  }
+}
