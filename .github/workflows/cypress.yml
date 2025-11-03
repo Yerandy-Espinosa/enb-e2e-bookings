@@ -1,0 +1,72 @@
+name: Run Cypress E2E (Parallel)
+
+on:
+  workflow_dispatch:    # lo ejecutas manualmente desde la pestaña Actions
+  push:
+    branches: [ main ]  # opcional: corre al hacer push a main
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        spec:
+          - cypress/e2e/Test_Eonline_one_off.cy.js
+          - cypress/e2e/Test_Eonline_one_off2.cy.js
+          - cypress/e2e/Test_Eonline_one_off3.cy.js
+          - cypress/e2e/Test_Eonline_one_off4.cy.js
+          - cypress/e2e/Test_Eonline_one_off5.cy.js
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            cypress-${{ runner.os }}-
+
+      - name: Verify Cypress
+        run: npx cypress verify
+
+      - name: Run spec ${{ matrix.spec }}
+        run: |
+          npx cypress run \
+            --browser chrome \
+            --headless \
+            --spec "${{ matrix.spec }}" \
+            --config viewportWidth=1366,viewportHeight=768,video=false \
+            --config-file cypress.config.js \
+            --env CI=true
+        env:
+          # Útil en contenedores
+          CHROME_BIN: google-chrome
+
+      # Sube capturas si falla
+      - name: Upload screenshots (on fail)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.spec }}
+          path: cypress/screenshots
+
+      - name: Upload videos (on fail)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-${{ matrix.spec }}
+          path: cypress/videos
