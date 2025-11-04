@@ -19,7 +19,7 @@ describe('Guest booking and payment flow', () => {
       if (adultBtn.length) {
         cy.wrap(adultBtn)
           .scrollIntoView()
-          .click({ force: true }); // Force click even if display:none
+          .click({ force: true });
       } else {
         cy.log('⚠️ Button #AdultSum not found in DOM, skipping');
       }
@@ -31,27 +31,36 @@ describe('Guest booking and payment flow', () => {
       .and('not.be.disabled')
       .click({ force: true });
 
-    // 🕐 Wait for payment form or iframe to appear
+    // 🕐 Wait for the payment form to appear (either in DOM or inside a single iframe)
     cy.document().then((doc) => {
-      const firstName = doc.querySelector('[name="first_name"]');
-      if (!firstName) {
-        // If the form is not yet in the main DOM, check if it's inside an iframe
-        const iframe = doc.querySelector('iframe');
-        if (iframe) {
-          cy.log('ℹ️ Payment form detected inside iframe');
-          cy.frameLoaded(iframe); // from cypress-iframe
-          cy.iframe()
-            .find('[name="first_name"]', { timeout: 20000 })
-            .should('be.visible')
-            .type('Yera');
-        } else {
-          // Retry until the payment form becomes available
-          cy.get('[name="first_name"]', { timeout: 25000 }).should('be.visible');
-        }
+      const formField = doc.querySelector('[name="first_name"]');
+      const iframes = Array.from(doc.querySelectorAll('iframe'));
+
+      if (formField) {
+        cy.log('✅ Payment form found directly in DOM');
+      } else if (iframes.length > 0) {
+        cy.log(`ℹ️ Found ${iframes.length} iframes, checking for payment form...`);
+
+        // Find the iframe that actually contains the payment form
+        cy.wrap(iframes).each(($iframe) => {
+          const body = $iframe.contents().find('body');
+          if (body.find('[name="first_name"]').length) {
+            cy.log('✅ Found payment form iframe');
+            cy.wrap($iframe).then((frame) => {
+              cy.wrap(frame.contents().find('body'))
+                .find('[name="first_name"]', { timeout: 20000 })
+                .should('be.visible')
+                .type('Yera');
+            });
+          }
+        });
+      } else {
+        cy.log('⚠️ No iframes detected and form not visible yet, waiting...');
+        cy.get('[name="first_name"]', { timeout: 25000 }).should('be.visible');
       }
     });
 
-    // 5️⃣ Fill the payment form (if it's visible in the main document)
+    // 5️⃣ Fill in the payment form if visible in main DOM
     cy.get('body').then(($body) => {
       if ($body.find('[name="first_name"]').length) {
         cy.get('[name="first_name"]').type('Yera');
@@ -66,16 +75,16 @@ describe('Guest booking and payment flow', () => {
         cy.get('[name="cvv"]').type('123');
         cy.get('[name="zip-code"]').type('12345');
       } else {
-        cy.log('⚠️ Payment form not found in main DOM — possibly loaded in iframe.');
+        cy.log('⚠️ Payment form not found in main DOM — possibly handled inside iframe.');
       }
     });
 
-    // 6️⃣ Click the "Pay Now" button
+    // 6️⃣ Click "Pay Now"
     cy.get('#pay_now', { timeout: 20000 })
       .should('be.visible')
       .click({ force: true });
 
-    // 7️⃣ Wait for redirect to confirmation page (My Profile / Orders / QR)
+    // 7️⃣ Wait for redirect to confirmation page
     cy.url({ timeout: 30000 }).should('match', /\/(orders|my-profile|qr-code)/);
   });
 });
