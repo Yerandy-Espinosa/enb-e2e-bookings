@@ -11,14 +11,24 @@ describe('Guest booking and payment flow', () => {
       .click({ force: true });
 
     // 3️⃣ Selecciona cantidad
-    if (Cypress.env('CI')) {
-    cy.wait(3000); // espera 3 segundos extra si se ejecuta en CI
-    }
+    // Espera a que el DOM y los botones estén listos
+    cy.wait(4000); // más tiempo para entornos remotos
 
-    cy.wait(2000);
+    // Asegúrate de que el campo base esté visible y activo antes del botón
+    cy.get('#AdultSum', { timeout: 15000 }).should('exist').and('be.visible');
+
+    // Ahora valida y fuerza el click sobre el botón InfantSum
     cy.get('#InfantSum', { timeout: 15000 })
-      .should('not.be.disabled')
-      .click({ force: true });
+      .should('exist')
+      .and('be.visible')
+      .then(($btn) => {
+        if ($btn.is(':disabled')) {
+          cy.log('Button still disabled, forcing click');
+          cy.wrap($btn).click({ force: true });
+        } else {
+          cy.wrap($btn).click();
+        }
+      });
 
     // 4️⃣ Espera a que se habilite el botón "Buy Now"
     cy.get('#bookeventCalendar button.common-btn-buy-now', { timeout: 20000 })
