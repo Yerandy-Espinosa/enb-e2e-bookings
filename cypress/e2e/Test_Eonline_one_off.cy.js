@@ -1,37 +1,40 @@
 describe('Guest booking and payment flow', () => {
   it('completes a booking successfully', () => {
 
-    // 1️⃣ Visita el evento
+    // 1️⃣ Visit the event page
     cy.viewport(1920, 1080);
     cy.visit('https://dev.exploringnotboring.com/experience/802/2/qa_test_online_oneoff');
 
-    // 2️⃣ Acepta cookies si aparecen
+    // 2️⃣ Accept cookies if the banner appears
     cy.get('button[data-cky-tag="accept-button"]', { timeout: 10000 })
       .should('be.visible')
       .click({ force: true });
 
-    // 3️⃣ Selecciona cantidad
-    // Espera hasta que el botón esté disponible o visible
+    // 3️⃣ Select ticket quantity
+    // Wait until the button is available or visible
     cy.get('body').then(($body) => {
       const adultBtn = $body.find('#AdultSum');
 
       if (adultBtn.length) {
         cy.wrap(adultBtn)
           .scrollIntoView()
-          .click({ force: true }); // Forzamos el click incluso si display:none
+          .click({ force: true }); // Force click even if display:none
       } else {
         cy.log('⚠️ Button #AdultSum not found in DOM, skipping');
       }
     });
 
-
-    // 4️⃣ Espera a que se habilite el botón "Buy Now"
+    // 4️⃣ Wait until the "Buy Now" button is enabled
     cy.get('#bookeventCalendar button.common-btn-buy-now', { timeout: 20000 })
       .should('be.visible')
       .and('not.be.disabled')
       .click({ force: true });
 
-    // 5️⃣ Completa el formulario
+    // 🕐 Explicit wait for payment form to render (up to 15 seconds)
+    cy.get('[name="first_name"]', { timeout: 15000 })
+      .should('be.visible');
+
+    // 5️⃣ Fill in the payment form
     cy.get('[name="first_name"]').type('Yera');
     cy.get('[name="last_name"]').type('Cypress');
     cy.get('#form_payment_booking div[aria-controls="iti-2__country-listbox"] div.iti__selected-dial-code').click();
@@ -44,12 +47,12 @@ describe('Guest booking and payment flow', () => {
     cy.get('[name="cvv"]').type('123');
     cy.get('[name="zip-code"]').type('12345');
 
-    // 6️⃣ Click en pagar
+    // 6️⃣ Click the "Pay Now" button
     cy.get('#pay_now', { timeout: 20000 })
       .should('be.visible')
       .click({ force: true });
 
-    // 7️⃣ Espera confirmación / redirección a "My Profile" o QR
+    // 7️⃣ Wait for confirmation / redirect to "My Profile" or "Orders"
     cy.url({ timeout: 30000 }).should('match', /\/(orders|my-profile)/);
   });
 });
