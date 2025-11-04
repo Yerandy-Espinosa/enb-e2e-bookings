@@ -47,6 +47,7 @@ jobs:
         run: |
           npx cypress run \
             --browser chrome \
+            --headed \
             --spec "${{ matrix.spec }}" \
             --config viewportWidth=1366,viewportHeight=768,video=false \
             --config-file cypress.config.js \
