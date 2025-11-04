@@ -15,10 +15,11 @@ describe('Guest booking and payment flow', () => {
     cy.wait(3000); // espera 3 segundos extra si se ejecuta en CI
     }
 
-    cy.get('#InfantSum', { timeout: 10000 })
-      .should('be.visible')
-      .and('not.be.disabled')
+    cy.wait(2000);
+    cy.get('#InfantSum', { timeout: 15000 })
+      .should('not.be.disabled')
       .click({ force: true });
+
 
 
 

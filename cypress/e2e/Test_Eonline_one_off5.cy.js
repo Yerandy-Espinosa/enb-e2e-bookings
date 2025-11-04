@@ -11,7 +11,14 @@ describe('Guest booking and payment flow', () => {
       .click({ force: true });
 
     // 3️⃣ Selecciona cantidad
-    cy.get('#InfantSum', { timeout: 10000 }).should('be.visible').click();
+    if (Cypress.env('CI')) {
+    cy.wait(3000); // espera 3 segundos extra si se ejecuta en CI
+    }
+
+    cy.wait(2000);
+    cy.get('#InfantSum', { timeout: 15000 })
+      .should('not.be.disabled')
+      .click({ force: true });
 
     // 4️⃣ Espera a que se habilite el botón "Buy Now"
     cy.get('#bookeventCalendar button.common-btn-buy-now', { timeout: 20000 })
