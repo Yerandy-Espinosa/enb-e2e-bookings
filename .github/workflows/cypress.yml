@@ -47,7 +47,6 @@ jobs:
         run: |
           npx cypress run \
             --browser chrome \
-            --headless \
             --spec "${{ matrix.spec }}" \
             --config viewportWidth=1366,viewportHeight=768,video=false \
             --config-file cypress.config.js \
@@ -55,11 +54,3 @@ jobs:
         env:
           # Útil en contenedores
           CHROME_BIN: google-chrome
-
-      # Sube capturas si falla
-      - name: Upload screenshots (on fail)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-${{ github.run_id }}-${{ github.job }}
-          path: cypress/screenshots
