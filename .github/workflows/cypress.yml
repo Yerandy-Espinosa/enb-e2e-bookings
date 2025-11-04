@@ -61,5 +61,5 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots-${{ matrix.spec##*/ }}-${{ github.run_number }}
+          name: screenshots-${{ matrix.spec }}-${{ github.run_number }}
           path: cypress/screenshots
