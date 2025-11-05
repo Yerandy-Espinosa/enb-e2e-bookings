@@ -81,25 +81,27 @@ describe('Guest booking and payment flow', () => {
               cy.wrap(frameBody).find('[name="cvv"]').type('123');
               cy.wrap(frameBody).find('[name="zip-code"]').type('12345');
 
-              // ✅ Now click "Pay Now" inside iframe if present
+              // ✅ Try real Pay Now click using native JS event
               const payNowBtn = frameBody.find('#pay_now');
               if (payNowBtn.length) {
-                cy.log('🟢 Triggering real Pay Now click sequence');
+                cy.log('🟢 Performing REAL native click on Pay Now');
                 cy.wrap(payNowBtn)
                   .scrollIntoView()
                   .should('be.visible')
                   .and('not.be.disabled')
-                  .trigger('mousedown', { force: true })
-                  .trigger('mouseup', { force: true })
-                  .trigger('click', { force: true });
+                  .then(($btn) => {
+                    const nativeBtn = $btn.get(0);
+                    cy.wait(1000);
+                    nativeBtn.click(); // ✅ executes true JS click
+                  });
 
-                // ⏳ Wait until disabled or invisible
+                // 🔍 Verify button becomes disabled or disappears
                 cy.wrap(payNowBtn, { timeout: 20000 }).should(($btn) => {
                   expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
                 });
 
-                // ✅ Wait for redirect after payment
-                cy.url({ timeout: 60000 }).should('match', /\/(orders|my-profile|qr-code)/);
+                // ⏳ Wait for redirect to My Profile
+                cy.url({ timeout: 60000 }).should('include', '/my-profile');
               } else {
                 cy.log('⚠️ #pay_now button not found inside iframe');
               }
@@ -116,20 +118,21 @@ describe('Guest booking and payment flow', () => {
     cy.get('body').then(($body) => {
       const payNow = $body.find('#pay_now');
       if (payNow.length) {
-        cy.log('✅ Triggering Pay Now in main DOM');
+        cy.log('✅ Triggering Pay Now in main DOM (native click)');
         cy.wrap(payNow)
-          .scrollIntoView()
           .should('be.visible')
           .and('not.be.disabled')
-          .trigger('mousedown', { force: true })
-          .trigger('mouseup', { force: true })
-          .trigger('click', { force: true });
+          .then(($btn) => {
+            const nativeBtn = $btn.get(0);
+            cy.wait(1000);
+            nativeBtn.click();
+          });
 
         cy.wrap(payNow, { timeout: 20000 }).should(($btn) => {
           expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
         });
 
-        cy.url({ timeout: 60000 }).should('match', /\/(orders|my-profile|qr-code)/);
+        cy.url({ timeout: 60000 }).should('include', '/my-profile');
       } else {
         cy.log('⚠️ #pay_now button not found in main DOM');
       }
