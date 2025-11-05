@@ -43,17 +43,25 @@ jobs:
       - name: Verify Cypress
         run: npx cypress verify
 
-      - name: Run Cypress spec ${{ matrix.spec }} (headed mode with no-sandbox)
+      - name: Run Cypress spec ${{ matrix.spec }} (headed Chrome no-sandbox)
         run: |
           xvfb-run -a npx cypress run \
             --browser chrome \
             --headed \
-            --no-sandbox \
             --spec "${{ matrix.spec }}" \
             --config viewportWidth=1366,viewportHeight=768,video=false,screenshotOnRunFailure=true \
             --config-file cypress.config.js \
-            --env CI=true
+            --env CI=true \
+            -- --no-sandbox --disable-dev-shm-usage --disable-gpu
         env:
           CHROME_BIN: google-chrome
           ELECTRON_DISABLE_SANDBOX: 1
           CYPRESS_RUN_BINARY: /home/runner/.cache/Cypress/15.5.0/Cypress/Cypress
+
+      - name: Upload screenshots (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-${{ matrix.spec }}
+          path: cypress/screenshots
+          if-no-files-found: ignore
