@@ -43,7 +43,7 @@ jobs:
       - name: Verify Cypress
         run: npx cypress verify
 
-      - name: Run Cypress spec ${{ matrix.spec }} (headed Chrome no-sandbox)
+      - name: Run Cypress specs (headed Chrome)
         run: |
           xvfb-run -a npx cypress run \
             --browser chrome \
@@ -58,10 +58,10 @@ jobs:
           ELECTRON_DISABLE_SANDBOX: 1
           CYPRESS_RUN_BINARY: /home/runner/.cache/Cypress/15.5.0/Cypress/Cypress
 
-      - name: Upload screenshots (if any)
+      - name: Upload screenshots (always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-screenshots-${{ matrix.spec }}
           path: cypress/screenshots
-          if-no-files-found: ignore
+          if-no-files-found: warn
