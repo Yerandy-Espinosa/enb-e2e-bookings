@@ -43,15 +43,13 @@ jobs:
       - name: Verify Cypress
         run: npx cypress verify
 
-      - name: Run spec ${{ matrix.spec }}
+      - name: Run spec ${{ matrix.spec }} (headed mode)
         run: |
-          npx cypress run \
+          xvfb-run -a npx cypress run \
             --browser chrome \
-            --headed \
             --spec "${{ matrix.spec }}" \
             --config viewportWidth=1366,viewportHeight=768,video=false \
             --config-file cypress.config.js \
             --env CI=true
         env:
-          # Útil en contenedores
           CHROME_BIN: google-chrome
