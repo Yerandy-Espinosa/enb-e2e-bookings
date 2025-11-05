@@ -1,7 +1,7 @@
 import 'cypress-iframe';
 
 describe('Guest booking and payment flow', () => {
-  it('completes a booking successfully with native Pay Now click sequence', () => {
+  it('completes a booking successfully with fully simulated Pay Now click', () => {
 
     // 1️⃣ Visit the event page
     cy.viewport(1920, 1080);
@@ -12,15 +12,13 @@ describe('Guest booking and payment flow', () => {
       .should('be.visible')
       .click({ force: true });
 
-    // 3️⃣ Select one ticket (keep the working version)
+    // 3️⃣ Select one ticket (works fine)
     cy.get('body').then(($body) => {
       const adultBtn = $body.find('#AdultSum');
       if (adultBtn.length) {
-        cy.wrap(adultBtn)
-          .scrollIntoView()
-          .click({ force: true });
+        cy.wrap(adultBtn).scrollIntoView().click({ force: true });
       } else {
-        cy.log('⚠️ Button #AdultSum not found, skipping');
+        cy.log('⚠️ #AdultSum not found, skipping');
       }
     });
 
@@ -30,7 +28,7 @@ describe('Guest booking and payment flow', () => {
       .and('not.be.disabled')
       .click({ force: true });
 
-    // 🕐 Wait for payment form or iframe
+    // 5️⃣ Wait for payment form or iframe
     cy.document().then((doc) => {
       const formField = doc.querySelector('[name="first_name"]');
       const iframes = Array.from(doc.querySelectorAll('iframe'));
@@ -70,44 +68,31 @@ describe('Guest booking and payment flow', () => {
               cy.wrap(frameBody).find('[name="cvv"]').type('123');
               cy.wrap(frameBody).find('[name="zip-code"]').type('12345');
 
-              // 🧠 Focus: Native click sequence for "Pay Now"
+              // 🧠 Focus: advanced native click for "Pay Now"
               cy.wrap(frameBody)
                 .find('#pay_now', { timeout: 20000 })
                 .scrollIntoView()
                 .should('be.visible')
                 .and('not.be.disabled')
                 .then(($btn) => {
-                  cy.log(`🟡 Pay Now detected. Text before click: "${$btn.text().trim()}"`);
+                  const el = $btn[0];
+                  cy.log('🟢 Performing advanced native click on #pay_now');
+                  cy.screenshot('before-pay-now');
 
-                  // Take screenshot before click
-                  cy.screenshot(`before-pay-now-${Date.now()}`);
+                  el.scrollIntoView({ block: 'center' });
+                  el.focus();
 
-                  const nativeBtn = $btn[0];
-                  nativeBtn.focus();
+                  // full native interaction
+                  el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' }));
+                  el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                  el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+                  el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-                  // Dispatch real browser events (mousedown, mouseup, click)
-                  ['mousedown', 'mouseup', 'click'].forEach(evt =>
-                    nativeBtn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }))
-                  );
-
-                  cy.log('🟢 Dispatched full native click sequence on #pay_now');
+                  cy.wait(3000);
+                  cy.screenshot('after-pay-now');
                 });
 
-              // 📸 Screenshot after click (2s delay to allow UI update)
-              cy.wait(2000);
-              cy.screenshot(`after-pay-now-${Date.now()}`);
-
-              // Wait for visible sign of progress or redirect
-              cy.get(frameBody, { timeout: 20000 }).then(($b) => {
-                const btn = $b.find('#pay_now');
-                if (btn.length) {
-                  cy.log(`🔍 After click: text="${btn.text().trim()}", disabled=${btn.is(':disabled')}`);
-                } else {
-                  cy.log('✅ #pay_now removed from DOM (likely processing)');
-                }
-              });
-
-              // 🧭 Wait for redirect to my-profile (success indicator)
+              // 🧭 Validate redirect or button state
               cy.url({ timeout: 60000 }).should('include', '/my-profile');
             });
           }
@@ -118,18 +103,18 @@ describe('Guest booking and payment flow', () => {
       }
     });
 
-    // 5️⃣ Fallback: Try clicking "Pay Now" in main DOM
+    // 6️⃣ Fallback: Try clicking Pay Now in main DOM
     cy.get('body').then(($body) => {
       const payNow = $body.find('#pay_now');
       if (payNow.length) {
-        const btn = payNow[0];
-        btn.focus();
-        ['mousedown', 'mouseup', 'click'].forEach(evt =>
-          btn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }))
+        const el = payNow[0];
+        el.focus();
+        ['pointerdown', 'mousedown', 'mouseup', 'click'].forEach(evt =>
+          el.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true }))
         );
-        cy.log('🟢 Native click sequence triggered on #pay_now in main DOM');
-        cy.wait(2000);
-        cy.screenshot(`after-pay-now-main-${Date.now()}`);
+        cy.log('🟢 Fallback click sequence triggered on #pay_now');
+        cy.wait(3000);
+        cy.screenshot('after-pay-now-fallback');
         cy.url({ timeout: 60000 }).should('include', '/my-profile');
       } else {
         cy.log('⚠️ #pay_now not found in main DOM');
@@ -137,5 +122,4 @@ describe('Guest booking and payment flow', () => {
     });
   });
 });
-
 

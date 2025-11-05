@@ -1,9 +1,9 @@
 name: Run Cypress E2E (Parallel)
 
 on:
-  workflow_dispatch:    # lo ejecutas manualmente desde la pestaña Actions
+  workflow_dispatch:
   push:
-    branches: [ main ]  # opcional: corre al hacer push a main
+    branches: [ main ]
 
 jobs:
   cypress:
@@ -20,10 +20,10 @@ jobs:
           - cypress/e2e/Test_Eonline_one_off5.cy.js
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -43,16 +43,21 @@ jobs:
       - name: Verify Cypress
         run: npx cypress verify
 
-      - name: Run spec ${{ matrix.spec }} (headed mode)
+      - name: Run Cypress spec ${{ matrix.spec }} (headed mode with no-sandbox)
         run: |
           xvfb-run -a npx cypress run \
             --browser chrome \
+            --headed \
+            --no-exit \
             --spec "${{ matrix.spec }}" \
-            --config viewportWidth=1366,viewportHeight=768,video=false \
+            --config viewportWidth=1366,viewportHeight=768,video=false,screenshotOnRunFailure=true \
             --config-file cypress.config.js \
             --env CI=true
         env:
           CHROME_BIN: google-chrome
+          CYPRESS_RUN_BINARY: /home/runner/.cache/Cypress/15.5.0/Cypress/Cypress
+          ELECTRON_DISABLE_SANDBOX: 1
+          NODE_OPTIONS: "--no-sandbox"
 
       - name: Upload screenshots (if any)
         if: always()
