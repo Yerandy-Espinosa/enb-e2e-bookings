@@ -20,18 +20,22 @@ jobs:
           - cypress/e2e/Test_Eonline_one_off5.cy.js
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 4️⃣ Cache Cypress binary
       - name: Cache Cypress binary
         uses: actions/cache@v4
         with:
@@ -40,9 +44,16 @@ jobs:
           restore-keys: |
             cypress-${{ runner.os }}-
 
+      # 5️⃣ Verify Cypress binary
       - name: Verify Cypress
         run: npx cypress verify
 
+      # 6️⃣ Sanitize spec name to make artifact names safe
+      - name: Sanitize spec name
+        id: sanitize
+        run: echo "SPEC_NAME=$(basename '${{ matrix.spec }}' .js | tr '/' '-')" >> $GITHUB_ENV
+
+      # 7️⃣ Run Cypress tests (headed Chrome with sandbox disabled)
       - name: Run Cypress spec (headed Chrome)
         run: |
           xvfb-run -a npx cypress run \
@@ -58,11 +69,11 @@ jobs:
           ELECTRON_DISABLE_SANDBOX: 1
           CYPRESS_RUN_BINARY: /home/runner/.cache/Cypress/15.5.0/Cypress/Cypress
 
-      - name: Upload screenshots (always)
+      # 8️⃣ Upload screenshots even if tests fail
+      - name: Upload Cypress screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # Replace "/" with "-" to make artifact names safe
-          name: cypress-screenshots-${{ matrix.spec }}-artifact
+          name: cypress-screenshots-${{ env.SPEC_NAME }}
           path: cypress/screenshots
           if-no-files-found: warn
