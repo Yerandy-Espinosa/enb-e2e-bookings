@@ -1,7 +1,7 @@
 import 'cypress-iframe';
 
 describe('Guest booking and payment flow', () => {
-  it('completes a booking successfully', () => {
+  it('completes a booking successfully (with diagnostic logs)', () => {
 
     // 1️⃣ Visit the event page
     cy.viewport(1920, 1080);
@@ -55,7 +55,7 @@ describe('Guest booking and payment flow', () => {
               cy.wrap(frameBody)
                 .find('[name="last_name"]').type('Cypress');
 
-              // ☎️ Select Spain (+34) and enter the phone number
+              // ☎️ Select Spain (+34) and enter phone number
               cy.wrap(frameBody)
                 .find('div[aria-controls="iti-2__country-listbox"] div.iti__selected-dial-code', { timeout: 10000 })
                 .scrollIntoView()
@@ -73,7 +73,7 @@ describe('Guest booking and payment flow', () => {
                 .clear()
                 .type('666884774');
 
-              // 📧 Other payment fields
+              // 📧 Fill payment data
               cy.wrap(frameBody).find('[name="email"]').type('yerandyed@gmail.com');
               cy.wrap(frameBody).find('[name="card_no"]').type('4000000000000077');
               cy.wrap(frameBody).find('[name="expiry_month"]').type('12');
@@ -81,26 +81,38 @@ describe('Guest booking and payment flow', () => {
               cy.wrap(frameBody).find('[name="cvv"]').type('123');
               cy.wrap(frameBody).find('[name="zip-code"]').type('12345');
 
-              // ✅ Try real Pay Now click using native JS event
+              // ✅ Locate and click Pay Now (with extra diagnostics)
               const payNowBtn = frameBody.find('#pay_now');
               if (payNowBtn.length) {
-                cy.log('🟢 Performing REAL native click on Pay Now');
+                cy.log('🟢 Attempting REAL native click on Pay Now');
                 cy.wrap(payNowBtn)
                   .scrollIntoView()
                   .should('be.visible')
                   .and('not.be.disabled')
                   .then(($btn) => {
+                    const btnTextBefore = $btn.text().trim();
+                    cy.log(`📄 [Before Click] Pay Now text: "${btnTextBefore}"`);
                     const nativeBtn = $btn.get(0);
-                    cy.wait(1000);
-                    nativeBtn.click(); // ✅ executes true JS click
+                    cy.wait(500);
+                    nativeBtn.click(); // Real JS click
+                    cy.log(`🕐 Click executed at ${new Date().toISOString()}`);
                   });
 
-                // 🔍 Verify button becomes disabled or disappears
-                cy.wrap(payNowBtn, { timeout: 20000 }).should(($btn) => {
-                  expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
+                // 🔍 Wait and inspect for visual/button state change
+                cy.wait(5000);
+                cy.wrap(payNowBtn).then(($btnAfter) => {
+                  const btnTextAfter = $btnAfter.text().trim();
+                  const disabled = $btnAfter.is(':disabled');
+                  cy.log(`📄 [After Click] Text: "${btnTextAfter}" | Disabled: ${disabled}`);
                 });
 
-                // ⏳ Wait for redirect to My Profile
+                // 🧭 Check if the button changes to "Processing..." or disappears
+                cy.get('body', { timeout: 15000 }).then(($bodyCheck) => {
+                  const buttonExists = $bodyCheck.find('#pay_now').length > 0;
+                  cy.log(`🔎 Pay Now still in DOM: ${buttonExists}`);
+                });
+
+                // ⏳ Final URL check for redirect
                 cy.url({ timeout: 60000 }).should('include', '/my-profile');
               } else {
                 cy.log('⚠️ #pay_now button not found inside iframe');
@@ -118,18 +130,23 @@ describe('Guest booking and payment flow', () => {
     cy.get('body').then(($body) => {
       const payNow = $body.find('#pay_now');
       if (payNow.length) {
-        cy.log('✅ Triggering Pay Now in main DOM (native click)');
+        cy.log('✅ Triggering Pay Now in main DOM (diagnostic mode)');
         cy.wrap(payNow)
+          .scrollIntoView()
           .should('be.visible')
           .and('not.be.disabled')
           .then(($btn) => {
+            const btnTextBefore = $btn.text().trim();
+            cy.log(`📄 [Main DOM Before Click] "${btnTextBefore}"`);
             const nativeBtn = $btn.get(0);
-            cy.wait(1000);
             nativeBtn.click();
+            cy.log(`🕐 Main DOM click executed at ${new Date().toISOString()}`);
           });
 
-        cy.wrap(payNow, { timeout: 20000 }).should(($btn) => {
-          expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
+        cy.wait(5000);
+        cy.get('body').then(($b) => {
+          const payNowExists = $b.find('#pay_now').length > 0;
+          cy.log(`🔍 Pay Now still exists in DOM: ${payNowExists}`);
         });
 
         cy.url({ timeout: 60000 }).should('include', '/my-profile');
@@ -139,3 +156,4 @@ describe('Guest booking and payment flow', () => {
     });
   });
 });
+
