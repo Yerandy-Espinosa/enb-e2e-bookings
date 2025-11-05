@@ -45,32 +45,61 @@ describe('Guest booking and payment flow', () => {
           if (body.find('[name="first_name"]').length) {
             cy.log('✅ Payment form located inside iframe');
             cy.wrap($iframe).then((frame) => {
-              cy.wrap(frame.contents().find('body'))
+              const frameBody = frame.contents().find('body');
+
+              // 👤 Fill personal info
+              cy.wrap(frameBody)
                 .find('[name="first_name"]', { timeout: 20000 })
                 .should('be.visible')
                 .type('Yera');
-              cy.wrap(frame.contents().find('body'))
+              cy.wrap(frameBody)
                 .find('[name="last_name"]').type('Cypress');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="email"]').type('yerandyed@gmail.com');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="card_no"]').type('4000000000000077');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="expiry_month"]').type('12');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="expiry_year"]').type('30');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="cvv"]').type('123');
-              cy.wrap(frame.contents().find('body'))
-                .find('[name="zip-code"]').type('12345');
+
+              // ☎️ Select Spain (+34) and enter the phone number
+              cy.wrap(frameBody)
+                .find('div[aria-controls="iti-2__country-listbox"] div.iti__selected-dial-code', { timeout: 10000 })
+                .scrollIntoView()
+                .should('be.visible')
+                .click({ force: true });
+
+              cy.wrap(frameBody)
+                .find('#iti-2__item-es-preferred', { timeout: 10000 })
+                .should('be.visible')
+                .click({ force: true });
+
+              cy.wrap(frameBody)
+                .find('[name="phone_number"]', { timeout: 10000 })
+                .should('be.visible')
+                .clear()
+                .type('666884774');
+
+              // 📧 Other payment fields
+              cy.wrap(frameBody).find('[name="email"]').type('yerandyed@gmail.com');
+              cy.wrap(frameBody).find('[name="card_no"]').type('4000000000000077');
+              cy.wrap(frameBody).find('[name="expiry_month"]').type('12');
+              cy.wrap(frameBody).find('[name="expiry_year"]').type('30');
+              cy.wrap(frameBody).find('[name="cvv"]').type('123');
+              cy.wrap(frameBody).find('[name="zip-code"]').type('12345');
 
               // ✅ Now click "Pay Now" inside iframe if present
-              const payNowBtn = frame.contents().find('body').find('#pay_now');
+              const payNowBtn = frameBody.find('#pay_now');
               if (payNowBtn.length) {
+                cy.log('🟢 Triggering real Pay Now click sequence');
                 cy.wrap(payNowBtn)
                   .scrollIntoView()
                   .should('be.visible')
-                  .click({ force: true });
+                  .and('not.be.disabled')
+                  .trigger('mousedown', { force: true })
+                  .trigger('mouseup', { force: true })
+                  .trigger('click', { force: true });
+
+                // ⏳ Wait until disabled or invisible
+                cy.wrap(payNowBtn, { timeout: 20000 }).should(($btn) => {
+                  expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
+                });
+
+                // ✅ Wait for redirect after payment
+                cy.url({ timeout: 60000 }).should('match', /\/(orders|my-profile|qr-code)/);
               } else {
                 cy.log('⚠️ #pay_now button not found inside iframe');
               }
@@ -83,20 +112,27 @@ describe('Guest booking and payment flow', () => {
       }
     });
 
-    // 5️⃣ Try clicking "Pay Now" in main DOM as fallback
+    // 5️⃣ Fallback: try "Pay Now" in main DOM
     cy.get('body').then(($body) => {
-      if ($body.find('#pay_now').length) {
-        cy.log('✅ Clicking Pay Now in main DOM');
-        cy.get('#pay_now')
+      const payNow = $body.find('#pay_now');
+      if (payNow.length) {
+        cy.log('✅ Triggering Pay Now in main DOM');
+        cy.wrap(payNow)
           .scrollIntoView()
           .should('be.visible')
-          .click({ force: true });
+          .and('not.be.disabled')
+          .trigger('mousedown', { force: true })
+          .trigger('mouseup', { force: true })
+          .trigger('click', { force: true });
+
+        cy.wrap(payNow, { timeout: 20000 }).should(($btn) => {
+          expect($btn.is(':disabled') || !$btn.is(':visible')).to.be.true;
+        });
+
+        cy.url({ timeout: 60000 }).should('match', /\/(orders|my-profile|qr-code)/);
       } else {
         cy.log('⚠️ #pay_now button not found in main DOM');
       }
     });
-
-    // 6️⃣ Verify success redirect
-    cy.url({ timeout: 30000 }).should('match', /\/(orders|my-profile|qr-code)/);
   });
 });
