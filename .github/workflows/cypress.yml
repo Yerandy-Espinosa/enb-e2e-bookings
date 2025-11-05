@@ -53,3 +53,11 @@ jobs:
             --env CI=true
         env:
           CHROME_BIN: google-chrome
+
+      - name: Upload screenshots (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-${{ matrix.spec }}
+          path: cypress/screenshots
+          if-no-files-found: ignore
